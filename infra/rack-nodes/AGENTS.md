@@ -11,6 +11,9 @@ a box with an empty disk boots it on its own, and a running one is reinstalled
 by raising its `reinstallGeneration`. The edges run the boot server, each serving the other, so
 only the first edge of a site is installed from a stick of its own.
 
+Bringing up a whole new site, from boxes to taking jobs, follows
+[`site-bring-up.md`](site-bring-up.md).
+
 ## The pieces
 
 - **Inventory** is `rackLinuxFleet.hosts` in the env's tuist chart values,
@@ -363,7 +366,11 @@ carries the same guard.
   `vrrp0-<n>` on the n-th uplink with its VRRP address and a default route
   through the other edge at metric 200, built the way the rack-edge pod
   builds it, plus global resolvers in
-  `/etc/systemd/resolved.conf.d/10-tuist-edge.conf`. Nothing serves DHCP on
+  `/etc/systemd/resolved.conf.d/10-tuist-edge.conf`. Once the site's WAN
+  address is known, an edge also gets a first-boot WAN service. The first
+  edge of a site has no other edge to go out through, so it takes the site's
+  static WAN itself until its rack-edge pod runs ("The first edge of a site" in
+  `infra/cluster-api-provider-tuist/AGENTS.md`). Nothing serves DHCP on
   the management VLAN at the colo, so that is how a reinstalled edge reaches
   the tailnet and gets converged. It needs the other edge up as master, so the
   edges are reinstalled one at a time. A per-host stick (`--host`) renders no
@@ -1210,6 +1217,39 @@ fixed count would hold slots it believes free.
 A Tart guest cannot be newer than its host. Every catalog image is a macOS 26
 guest and the rack's hosts run macOS 27, so every Xcode runs there; a catalog
 entry on a newer guest needs the hosts updated first.
+
+### More than one site
+
+One rack fleet holds every site's minis: one operator, one set of credentials
+and one CAPI fleet, whose Machines are `<rackFleet.name>-<host>` at every site.
+`rackFleet.site` (ber1) is the default site, and every other site is a key of
+`rackFleet.sites` (larch). A host at such a site sets `site: <site>` and takes
+that site's block:
+
+- **Its Node's fleet.** The host's Node carries `tuist.dev/fleet:
+  <rackFleet.name>-<site>` (`RackHost.spec.nodeFleet`, overridable as the
+  site's `nodeFleet`), not the default site's fleet. Runner pools select Nodes
+  by that label alone, so without it ber1's pools would place runners on larch
+  minis. The Machine keeps the operator's fleet, its name and its credentials,
+  as for any `nodeFleet`. A lent host (`lendTo`) keeps the borrower's fleet.
+- **Its SSH ingress** is the site's `sshIngressAllowCIDRs`, the site's own
+  edges. It never falls back to the default site's, and the chart refuses a
+  host at a site whose block has none.
+- **Its pools.** The site's `runners` is a runner catalog of its own, with the
+  same keys as `rackFleet.runners`. It renders
+  `<release>-runner-pool-macos-<site>-<xcode>` pools that select the site's
+  fleet, so each site's pools share only that site's guest slots, and
+  `TUIST_RUNNERS_SITE_POOLS` lists them as `<pool>=<site>:macos` after the
+  default site's.
+- **Its VMs' cache gateways** (`vmCacheGatewayCIDRs`) join the operator's
+  fleet-wide `--rackhost-vm-cache-gateway-cidrs`: the pf pass is the same on
+  every rack host, and a host has no route to another site's gateway.
+
+A host naming a site that is neither `rackFleet.site` nor a key of
+`rackFleet.sites` fails the render. Keep a site's `runners` disabled until
+its minis are declared and its uplink is up. The rack fleet's
+MachineHealthCheck still spans every site, so while one site is dark its
+`unhealthyRange` also holds back remediation of a single mini at the other.
 
 ### Lending a host to another env
 
