@@ -1,15 +1,4 @@
-# TuistServer (Server Integration)
+# TuistServer
 
-This module handles CLI integration with the Tuist Server APIs.
-
-## Responsibilities
-- Resolve server environment (base URL, OAuth client ID) with env var overrides.
-- Provide cache storage factories and API clients for server-backed features.
-- Map CLI actions to server operations (projects, previews, analytics, registry).
-
-## Related Context
-- Server codebase: `server/AGENTS.md`
-
-## Invariants
-- `TUIST_URL` overrides config URL and must be a valid URL.
-- OAuth client ID defaults to a built-in value if not provided.
+- `TUIST_URL` overrides the configured server URL and must be valid.
+- Do not hand-edit `OpenAPI/server.yml`, `OpenAPI/Types.swift`, or `OpenAPI/Client.swift`. Update the server controller schemas, then run `mise run generate-api-cli-code` from `server/` to export the spec and regenerate the Swift client.

@@ -1,24 +1,3 @@
-# TuistKit (CLI Commands)
+# TuistKit
 
-This module houses CLI command definitions, command wiring, and high-level orchestration.
-
-## Responsibilities
-- Define the root command (`TuistCommand`) and subcommand groups.
-- Load config, server URL, and trackable command execution lifecycle.
-- Centralize error handling, logging, and Noora integration.
-
-## Boundaries
-- Keep orchestration here; domain logic lives in feature modules (e.g., generator, cache, server).
-- Avoid direct file system or graph logic that belongs in `TuistCore`, `TuistGenerator`, or `TuistSupport`.
-
-## Invariants
-- `TuistCommand` groups commands into: Get started, Develop, Share, Account, Other.
-- `TuistCommand.main` initializes cache directories, loads config, resolves server URL, and runs `TrackableCommand`.
-- Noora logging is reinitialized after command execution to ensure logs are captured in verbose logs.
-- Cache warm selection is scoped from explicit non-test roots; focused test roots may remain in the graph but do not expand binary cache candidates.
-
-## Related Context
-- CLI entry point: `cli/Sources/tuist/AGENTS.md`
-- Core domain models: `cli/Sources/TuistCore/AGENTS.md`
-- Project generation: `cli/Sources/TuistGenerator/AGENTS.md`
-- Server integration: `cli/Sources/TuistServer/AGENTS.md`
+Keep legacy command services focused on orchestration; domain logic belongs in feature modules. The root `TuistCommand` and runtime setup live in `cli/Sources/tuist`, not here.
